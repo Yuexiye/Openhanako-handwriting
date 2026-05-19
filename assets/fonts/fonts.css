@@ -1,0 +1,28 @@
+@font-face {
+  font-family: 'Ma Shan Zheng';
+  src: url('MaShanZheng-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Caveat';
+  src: url('Caveat-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 700;
+}
+@font-face {
+  font-family: 'Zen Maru Gothic';
+  src: url('ZenMaruGothic-Regular.ttf') format('truetype');
+  font-weight: normal;
+}
+@font-face {
+  font-family: 'Jason Handwriting 9';
+  src: url('JasonHandwriting9.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: '851 Lakeus Night Writing';
+  src: url('851LakeusNightWriting-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}

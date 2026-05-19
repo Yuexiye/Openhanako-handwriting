@@ -1,0 +1,20 @@
+{
+  "manifestVersion": 1,
+  "id": "hanako-handwriting",
+  "name": "手写稿生成器",
+  "version": "0.1.0",
+  "description": "将文本渲染为手写风格图片的工作台",
+  "minAppVersion": "0.0.0",
+  "trust": "full-access",
+  "contributes": {
+    "tools": [],
+    "page": {
+      "title": { "zh": "手写稿生成器", "en": "Handwriting" },
+      "icon": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3dc5ff\" stroke-width=\"1.5\"><text x=\"3\" y=\"20\" font-size=\"20\">✎</text></svg>",
+      "route": "/handwriting"
+    }
+  },
+  "ui": {
+    "hostCapabilities": ["external.open"]
+  }
+}
