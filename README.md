@@ -22,7 +22,6 @@
 ## 参考来源
 
 - [Vibe coding 手写稿生成器上线 — 狂奔滴小馬](https://www.bilibili.com/video/BV1zBLp6zEdr) — 手写稿渲染的灵感来源
-- [手把手教你如何领取一只可自定义的AI伴侣回家 — Noi_钦灵](https://www.bilibili.com/video/BV1PoRRBNEuG)
 - [猫啃网](https://www.maoken.com/) — 免费商用字体资源
 - [100font.com](https://www.100font.com/) — 免费商用字体资源
 
