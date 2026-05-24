@@ -91,6 +91,17 @@
     }
     .btn-secondary:hover { background: rgba(100,100,140,0.5); }
 
+    .label-btn {
+      padding: 4px 10px; font-size: 12px;
+      background: rgba(100,100,140,0.2); color: #e6e6f0;
+      border: 1px solid rgba(100,100,140,0.3);
+      border-radius: 6px; cursor: pointer; font-family: inherit;
+      transition: all 0.15s;
+    }
+    .label-btn:hover {
+      background: rgba(100,100,140,0.5); border-color: #76e3e5;
+    }
+
     .preview-panel {
       flex: 1;
       display: flex;
@@ -136,12 +147,25 @@
     </div>
 
     <div class="config-group">
+      <label>书写主题</label>
+      <select id="writingTheme">
+        <option value="">— 自定义 —</option>
+        <option value="classic">📜 古典诗笺</option>
+        <option value="warm">📖 暖色手账</option>
+        <option value="clean">📄 清爽作业</option>
+        <option value="literary">🎋 文人笔意</option>
+        <option value="cute">🌸 少女手写</option>
+      </select>
+    </div>
+
+    <div class="config-group">
       <label>纸张样式</label>
       <select id="paperStyle">
         <option value="lined">横线纸</option>
         <option value="grid">方格纸</option>
         <option value="blank">空白纸</option>
         <option value="letter">信纸</option>
+        <option value="composition">作文纸</option>
       </select>
     </div>
 
@@ -161,6 +185,8 @@
         <option value="Ma Shan Zheng">马善政</option>
         <option value="Jason Handwriting 9" selected>清松手写体9 · 文青</option>
         <option value="851 Lakeus Night Writing">851远星夜行手写体</option>
+        <option value="Long Cang">龙仓体</option>
+        <option value="ZCOOL QingKe HuangYou">站酷黄油体</option>
         <option value="Zen Maru Gothic">Zen Maru Gothic（日文）</option>
       </select>
     </div>
@@ -253,6 +279,17 @@
     </div>
 
     <div class="config-group">
+      <label>文字标签</label>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px" id="labelGrid">
+        <button data-label="满分作文" class="label-btn">满分作文</button>
+        <button data-label="优秀作文" class="label-btn">优秀作文</button>
+        <button data-label="读书笔记" class="label-btn">读书笔记</button>
+        <button data-label="古诗文摘抄" class="label-btn">古诗文摘抄</button>
+        <button data-label="课堂笔记" class="label-btn">课堂笔记</button>
+      </div>
+    </div>
+
+    <div class="config-group">
       <label>墨迹效果</label>
       <select id="inkEffect">
         <option value="none">无（标准）</option>
@@ -262,11 +299,16 @@
     </div>
 
     <div class="config-group">
-        <option value="none">无</option>
-        <option value="light" selected>自然连笔</option>
-        <option value="smooth">流畅连笔</option>
-      </select>
+      <label style="display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="fontPool" style="accent-color:#76e3e5"> 字体池混排
+      </label>
+      <span style="font-size:10px;color:#7070a0">每个中文字从 5 款手写字体中随机选择</span>
     </div>
+
+    <div class="config-group">
+      <label>倾斜趋势 <span id="tiltVal" style="color:#76e3e5">1</span></label>
+      <input type="range" id="tiltStrength" min="0" max="4" value="1" style="accent-color:#76e3e5">
+      <span style="font-size:10px;color:#7070a0">模拟书写倾斜的渐变-纠正循环</span>
     </div>
 
     <div class="config-group">
@@ -378,6 +420,42 @@
     const LINE_LEFT = 60;       // 横线左边界
     const LINE_RIGHT = CANVAS_W - 60;  // 横线右边界
 
+    // ── 字体池混排 ──
+    const CHINESE_FONT_POOL = [
+      'Ma Shan Zheng',
+      'Jason Handwriting 9',
+      '851 Lakeus Night Writing',
+      'Long Cang',
+      'ZCOOL QingKe HuangYou',
+    ];
+
+    // ── 倾斜趋势模拟 ──
+    let tiltAngle = 0;       // 当前累计倾斜角度(度)
+    let tiltDirection = 1;   // 当前倾斜方向
+    let tiltCounter = 0;     // 当前位置计数
+    let tiltCorrectAt = 0;   // 下次纠正位置
+
+    function resetTiltState(strength) {
+      tiltAngle = 0;
+      tiltDirection = strength > 0 ? 1 : 0;
+      tiltCounter = 0;
+      tiltCorrectAt = 10 + Math.floor(seededRandom() * 10); // 10-19 字后纠正
+    }
+
+    function getTiltAngle(strength) {
+      if (strength <= 0) return 0;
+      // 每字渐变偏移
+      tiltAngle += tiltDirection * 0.25 * strength;
+      tiltCounter++;
+      // 到达纠正位置时反转方向
+      if (tiltCounter >= tiltCorrectAt && tiltAngle !== 0) {
+        tiltDirection *= -1;
+        tiltCounter = 0;
+        tiltCorrectAt = 10 + Math.floor(seededRandom() * 10);
+      }
+      return tiltAngle;
+    }
+
     function getLineY(lineIndex) {
       return LINE_START_Y + lineIndex * LINE_GAP;
     }
@@ -424,30 +502,65 @@
         ctx.strokeStyle = 'rgba(100,100,120,0.15)';
         ctx.lineWidth = 0.5;
         ctx.strokeRect(40, 30, CANVAS_W - 80, 45);
+      } else if (style === 'composition') {
+        // 作文纸：方格 + 田字十字虚线
+        const cellSize = LINE_GAP; // 36px，与横线间距一致
+        const gridLeft = 44;
+        const gridTop = 64;
+        const cols = Math.floor((CANVAS_W - 88) / cellSize);
+        const rows = Math.floor((CANVAS_H - 104) / cellSize);
+
+        // 外边框
+        ctx.strokeStyle = 'rgba(120,80,60,0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(gridLeft - 2, gridTop - 2, cols * cellSize + 4, rows * cellSize + 4);
+
+        // 格子 + 田字虚线
+        ctx.lineWidth = 0.5;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const x = gridLeft + c * cellSize;
+            const y = gridTop + r * cellSize;
+            // 格子外框
+            ctx.strokeStyle = 'rgba(100,100,120,0.2)';
+            ctx.strokeRect(x, y, cellSize, cellSize);
+            // 田字十字虚线
+            const cx = x + cellSize / 2;
+            const cy = y + cellSize / 2;
+            ctx.strokeStyle = 'rgba(100,100,120,0.12)';
+            ctx.setLineDash([2, 3]);
+            ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + cellSize, cy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx, y + cellSize); ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
       }
       // blank: 不画任何线
     }
 
     // ── 文字渲染 + 抖动（横线对齐版）──
 
-    function drawText(text, cnFont, enFont, otherFont, fontSize, jitter, corrStyle, corrPos, paperStyle, inkColor, inkEffect) {
+    function drawText(text, cnFont, enFont, otherFont, fontSize, jitter, corrStyle, corrPos, paperStyle, inkColor, inkEffect, fontPoolEnabled, tiltStrength) {
       const marginLeft = 80;
       const marginRight = 80;
       const maxWidth = CANVAS_W - marginLeft - marginRight;
 
       ctx.fillStyle = inkColor;
 
-      // 判断字符所属语种
+      // 判断字符所属语种（含字体池混排）
       function getFontForChar(char) {
         const code = char.charCodeAt(0);
-        // CJK 统一表意文字及扩展区、全角符号
-        if ((code >= 0x4E00 && code <= 0x9FFF) ||   // CJK 统一表意文字
-            (code >= 0x3400 && code <= 0x4DBF) ||   // CJK 扩展 A
-            (code >= 0x20000 && code <= 0x2FFFF) || // CJK 扩展 B~F
-            (code >= 0x3000 && code <= 0x303F) ||   // CJK 符号和标点
-            (code >= 0xFF00 && code <= 0xFFEF) ||   // 全角/半角
-            (code >= 0x2E80 && code <= 0x2EFF) ||   // CJK 部首补充
-            (code >= 0x2F00 && code <= 0x2FDF)) {   // 康熙部首
+        // CJK — 启用字体池则在池中随机选
+        if ((code >= 0x4E00 && code <= 0x9FFF) ||
+            (code >= 0x3400 && code <= 0x4DBF) ||
+            (code >= 0x20000 && code <= 0x2FFFF) ||
+            (code >= 0x3000 && code <= 0x303F) ||
+            (code >= 0xFF00 && code <= 0xFFEF) ||
+            (code >= 0x2E80 && code <= 0x2EFF) ||
+            (code >= 0x2F00 && code <= 0x2FDF)) {
+          if (fontPoolEnabled) {
+            return CHINESE_FONT_POOL[Math.floor(seededRandom() * CHINESE_FONT_POOL.length)];
+          }
           return cnFont;
         }
         // 日文假名
@@ -474,13 +587,17 @@
 
       const hasLines = (paperStyle === 'lined' || paperStyle === 'grid');
       const isLetter = (paperStyle === 'letter');
+      const isComposition = (paperStyle === 'composition');
 
-      const marginL = hasLines || isLetter ? LINE_LEFT + 8 : 80;
-      const marginR = hasLines || isLetter ? 60 : 80;
-      const marginT = hasLines ? 80 : (isLetter ? 100 : 80);
-      const lineH = hasLines || isLetter ? LINE_GAP : fontSize * 1.8;
+      // 初始化倾斜状态
+      resetTiltState(tiltStrength);
 
-      ctx.textBaseline = hasLines || isLetter ? 'bottom' : 'top';
+      const marginL = hasLines || isLetter ? LINE_LEFT + 8 : (isComposition ? 44 : 80);
+      const marginR = hasLines || isLetter ? 60 : (isComposition ? 44 : 80);
+      const marginT = hasLines ? 80 : (isLetter ? 100 : (isComposition ? 64 : 80));
+      const lineH = hasLines || isLetter ? LINE_GAP : (isComposition ? LINE_GAP : fontSize * 1.8);
+
+      ctx.textBaseline = hasLines || isLetter || isComposition ? 'bottom' : 'top';
 
       const firstLineOffset = isLetter ? 20 : 0;
       let lineIndex = 0;
@@ -628,15 +745,21 @@
         let charWidth = ctx.measureText(char).width;
 
         // 换行
-        const rightEdge = hasLines || isLetter ? LINE_RIGHT - 8 : marginL + maxWidth;
+        const rightEdge = hasLines || isLetter ? LINE_RIGHT - 8 : (isComposition ? LINE_LEFT + Math.floor((CANVAS_W - 88) / LINE_GAP) * LINE_GAP - 4 : marginL + maxWidth);
         if (cursorX + charWidth > rightEdge) {
           newline();
         }
 
-        const dx = (seededRandom() - 0.5) * 2 * jitter * (hasLines ? 1.5 : 1);
+        // 作文纸：工整对齐，限制抖动
+        const effectiveJitter = isComposition ? Math.min(jitter, 1) : jitter;
+        const dx = (seededRandom() - 0.5) * 2 * effectiveJitter * (hasLines ? 1.5 : 1);
         const dy = (seededRandom() - 0.5) * (hasLines ? jitter * 3 : jitter * 2);
-        const rot = (seededRandom() - 0.5) * 2 * (jitter * 0.5) * (Math.PI / 180);
-        const scale = 1 + (seededRandom() - 0.5) * (jitter * 0.01);
+        
+        // 倾斜：抖动的随机旋转 + 倾斜趋势模拟
+        const baseRot = (seededRandom() - 0.5) * 2 * (effectiveJitter * 0.5) * (Math.PI / 180);
+        const trendRot = getTiltAngle(tiltStrength) * (Math.PI / 180);
+        const rot = baseRot + trendRot;
+        const scale = 1 + (seededRandom() - 0.5) * (effectiveJitter * 0.01);
 
         ctx.save();
         ctx.translate(cursorX + charWidth / 2 + dx, cursorY + dy);
@@ -731,6 +854,117 @@
       if (this.value) applyCharPreset(this.value);
     });
 
+    // ── 书写主题预设 ──
+    const WRITING_THEMES = {
+      classic: {
+        paperStyle: 'composition',
+        paperColor: '#f5f0e8',
+        cnFont: 'Ma Shan Zheng',
+        enFont: 'Caveat',
+        otherFont: 'Ma Shan Zheng',
+        fontSize: '24',
+        jitter: '1',
+        corrStyle: 'single',
+        corrPos: 'above',
+        inkColor: '#1a1a2a',
+        inkEffect: 'light',
+        fontPool: true,
+        tiltStrength: '2',
+      },
+      warm: {
+        paperStyle: 'lined',
+        paperColor: '#f5ecd0',
+        cnFont: 'Jason Handwriting 9',
+        enFont: 'Caveat',
+        otherFont: 'Jason Handwriting 9',
+        fontSize: '24',
+        jitter: '1',
+        corrStyle: 'wavy',
+        corrPos: 'inline',
+        inkColor: '#3d2b1f',
+        inkEffect: 'light',
+        fontPool: false,
+        tiltStrength: '0',
+      },
+      clean: {
+        paperStyle: 'lined',
+        paperColor: '#ffffff',
+        cnFont: 'Jason Handwriting 9',
+        enFont: 'Caveat',
+        otherFont: 'Jason Handwriting 9',
+        fontSize: '24',
+        jitter: '0',
+        corrStyle: 'single',
+        corrPos: 'above',
+        inkColor: '#2a2a3a',
+        inkEffect: 'none',
+        fontPool: false,
+        tiltStrength: '0',
+      },
+      literary: {
+        paperStyle: 'blank',
+        paperColor: '#f5f0e8',
+        cnFont: '851 Lakeus Night Writing',
+        enFont: 'Caveat',
+        otherFont: '851 Lakeus Night Writing',
+        fontSize: '32',
+        jitter: '3',
+        corrStyle: 'slash',
+        corrPos: 'inline',
+        inkColor: '#1a1a2a',
+        inkEffect: 'heavy',
+        fontPool: true,
+        tiltStrength: '2',
+      },
+      cute: {
+        paperStyle: 'grid',
+        paperColor: '#fce4ec',
+        cnFont: 'Jason Handwriting 9',
+        enFont: 'Caveat',
+        otherFont: 'Jason Handwriting 9',
+        fontSize: '24',
+        jitter: '2',
+        corrStyle: 'circle',
+        corrPos: 'above',
+        inkColor: '#5c3a4a',
+        inkEffect: 'light',
+        fontPool: false,
+        tiltStrength: '1',
+      },
+    };
+
+    document.getElementById('writingTheme').addEventListener('change', function() {
+      const theme = WRITING_THEMES[this.value];
+      if (!theme) return;
+      const map = {
+        paperStyle: 'paperStyle',
+        paperColor: 'paperColor',
+        cnFont: 'cnFont',
+        enFont: 'enFont',
+        otherFont: 'otherFont',
+        fontSize: 'fontSize',
+        jitter: 'jitter',
+        corrStyle: 'corrStyle',
+        corrPos: 'corrPos',
+        inkColor: 'inkColor',
+        inkEffect: 'inkEffect',
+      };
+      for (const [key, id] of Object.entries(map)) {
+        const el = document.getElementById(id);
+        if (el && theme[key] !== undefined) el.value = theme[key];
+      }
+      // 字体池和倾斜
+      const poolEl = document.getElementById('fontPool');
+      if (poolEl && theme.fontPool !== undefined) poolEl.checked = theme.fontPool;
+      const tiltEl = document.getElementById('tiltStrength');
+      if (tiltEl && theme.tiltStrength !== undefined) {
+        tiltEl.value = theme.tiltStrength;
+        document.getElementById('tiltVal').textContent = theme.tiltStrength;
+      }
+      render();
+      savePrefs();
+    });
+
     // ── 贴纸系统 ──
     const STICKER_LIST = ['❀', '✦', '♡', '☆', '📎', '🎀', '🖌', '🌸', '✨', '☕'];
     let activeStickers = [];  // [{emoji, x, y, size}]
@@ -768,15 +1002,58 @@
       });
     })();
 
+    // ── 文字标签系统 ──
+    function addTextLabel(text) {
+      const x = 60 + Math.random() * (CANVAS_W - 160);
+      const y = 30 + Math.random() * (CANVAS_H * 0.35);
+      activeStickers.push({
+        type: 'label',
+        text,
+        x, y,
+        fontSize: 28,
+        color: '#2a2a3a',
+      });
+      render();
+      savePrefs();
+    }
+
+    (function initLabels() {
+      document.querySelectorAll('#labelGrid .label-btn').forEach(btn => {
+        btn.addEventListener('click', () => addTextLabel(btn.dataset.label));
+      });
+    })();
+
     // ── 贴纸渲染 ──
     function drawStickers() {
       for (const st of activeStickers) {
         ctx.save();
-        ctx.font = `${st.size}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.globalAlpha = 0.85;
-        ctx.fillText(st.emoji, st.x, st.y);
+        if (st.type === 'label') {
+          const cnFont = document.getElementById('cnFont').value;
+          ctx.font = `${st.fontSize}px "${cnFont}", "Ma Shan Zheng", serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          // 标签背景
+          const metrics = ctx.measureText(st.text);
+          const tw = metrics.width + 16;
+          const th = st.fontSize + 8;
+          ctx.fillStyle = 'rgba(245, 240, 232, 0.9)';
+          ctx.beginPath();
+          ctx.roundRect(st.x - tw / 2, st.y - th / 2, tw, th, 4);
+          ctx.fill();
+          // 边框
+          ctx.strokeStyle = 'rgba(180, 150, 120, 0.5)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          // 文字
+          ctx.fillStyle = st.color || '#2a2a3a';
+          ctx.fillText(st.text, st.x, st.y);
+        } else {
+          ctx.font = `${st.size}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.globalAlpha = 0.85;
+          ctx.fillText(st.emoji, st.x, st.y);
+        }
         ctx.restore();
       }
     }
@@ -795,12 +1072,55 @@
       // 反向遍历（上层贴纸优先）
       for (let i = activeStickers.length - 1; i >= 0; i--) {
         const st = activeStickers[i];
-        // 估算点击区域：贴纸 emoji 附近 30px
-        if (Math.abs(mx - st.x) < 25 && Math.abs(my - st.y) < 25) {
-          dragStickerIdx = i;
-          dragOffsetX = st.x - mx;
-          dragOffsetY = st.y - my;
-          break;
+        if (st.type === 'label') {
+          // 标签按字体大小估算宽度
+          const tmpCtx = document.createElement('canvas').getContext('2d');
+          tmpCtx.font = `${st.fontSize}px "Ma Shan Zheng", serif`;
+          const tw = tmpCtx.measureText(st.text).width + 16;
+          const th = st.fontSize + 8;
+          if (mx >= st.x - tw / 2 - 10 && mx <= st.x + tw / 2 + 10 &&
+              my >= st.y - th / 2 - 10 && my <= st.y + th / 2 + 10) {
+            dragStickerIdx = i;
+            dragOffsetX = st.x - mx;
+            dragOffsetY = st.y - my;
+            break;
+          }
+        } else {
+          // emoji
+          if (Math.abs(mx - st.x) < 30 && Math.abs(my - st.y) < 30) {
+            dragStickerIdx = i;
+            dragOffsetX = st.x - mx;
+            dragOffsetY = st.y - my;
+            break;
+          }
+        }
+      }
+    });
+
+    // 双击编辑标签
+    canvas.addEventListener('dblclick', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = CANVAS_W / rect.width;
+      const scaleY = CANVAS_H / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+
+      for (let i = activeStickers.length - 1; i >= 0; i--) {
+        const st = activeStickers[i];
+        if (st.type !== 'label') continue;
+        const tmpCtx = document.createElement('canvas').getContext('2d');
+        tmpCtx.font = `${st.fontSize}px "Ma Shan Zheng", serif`;
+        const tw = tmpCtx.measureText(st.text).width + 16;
+        const th = st.fontSize + 8;
+        if (mx >= st.x - tw / 2 && mx <= st.x + tw / 2 &&
+            my >= st.y - th / 2 && my <= st.y + th / 2) {
+          const newText = prompt('编辑标签文字：', st.text);
+          if (newText && newText.trim()) {
+            st.text = newText.trim();
+            render();
+            savePrefs();
+          }
+          return;
         }
       }
     });
@@ -847,20 +1167,32 @@
       const cnFont = document.getElementById('cnFont').value;
       const enFont = document.getElementById('enFont').value;
       const otherFont = document.getElementById('otherFont').value;
-      const fontSize = parseInt(document.getElementById('fontSize').value);
-      const jitter = parseInt(document.getElementById('jitter').value);
+      const fontSizeInput = parseInt(document.getElementById('fontSize').value);
+      const jitterInput = parseInt(document.getElementById('jitter').value);
+      const isComposition = (paperStyle === 'composition');
+      const fontSize = isComposition ? Math.floor(LINE_GAP * 0.72) : fontSizeInput;
+      const jitter = isComposition ? Math.min(jitterInput, 1) : jitterInput;
       const corrStyle = document.getElementById('corrStyle').value;
       const corrPos = document.getElementById('corrPos').value;
       const text = document.getElementById('inputText').value;
 
       const inkColor = document.getElementById('inkColor').value;
       const inkEffect = document.getElementById('inkEffect').value;
+      const fontPoolEnabled = document.getElementById('fontPool').checked;
+      const tiltStrength = parseInt(document.getElementById('tiltStrength').value);
       drawPaper(paperColor, paperStyle);
-      drawText(text, cnFont, enFont, otherFont, fontSize, jitter, corrStyle, corrPos, paperStyle, inkColor, inkEffect);
+      drawText(text, cnFont, enFont, otherFont, fontSize, jitter, corrStyle, corrPos, paperStyle, inkColor, inkEffect, fontPoolEnabled, tiltStrength);
       drawStickers();
 
-      document.getElementById('statusBar').textContent =
-        `已渲染 — ${text.length} 字 | CN:${cnFont} | EN:${enFont} | ${fontSize}px | 抖动 ${jitter}`;
+      const fontInfo = cnFont.split(' ').slice(0,2).join(' ');
+      const extras = [];
+      if (fontPoolEnabled) extras.push('混排');
+      if (tiltStrength > 0) extras.push('倾斜' + tiltStrength);
+      const extraStr = extras.length > 0 ? ' [' + extras.join('+') + ']' : '';
+      const statusText = isComposition
+        ? `✓ 作文纸 — ${text.length} 字 | 字号由格子决定 (${fontSize}px)${extraStr}`
+        : `✓ 已生成 — ${text.length} 字 | ${fontInfo} | ${fontSize}px | 抖动 ${jitter}${extraStr}`;
+      document.getElementById('statusBar').textContent = statusText;
     }
 
     // ── 导出 ──
@@ -913,7 +1245,7 @@
     const STORAGE_KEY = 'hanako-handwriting-config';
 
     function savePrefs() {
-      const prefs = {
+      const saved = {
         paperStyle: document.getElementById('paperStyle').value,
         paperColor: document.getElementById('paperColor').value,
         cnFont: document.getElementById('cnFont').value,
@@ -925,10 +1257,12 @@
         corrPos: document.getElementById('corrPos').value,
         inkColor: document.getElementById('inkColor').value,
         inkEffect: document.getElementById('inkEffect').value,
+        fontPool: document.getElementById('fontPool').checked,
+        tiltStrength: document.getElementById('tiltStrength').value,
         text: document.getElementById('inputText').value,
-        stickers: activeStickers,
+        stickers: activeStickers, // [{type:'emoji'|'label', ...}]
       };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch {}
     }
 
     function loadPrefs() {
@@ -953,6 +1287,14 @@
           const el = document.getElementById(id);
           if (el && prefs[key] !== undefined) el.value = prefs[key];
         }
+        // 字体池和倾斜（非 select/textarea）
+        const poolEl = document.getElementById('fontPool');
+        if (poolEl && prefs.fontPool !== undefined) poolEl.checked = prefs.fontPool;
+        const tiltEl = document.getElementById('tiltStrength');
+        if (tiltEl && prefs.tiltStrength !== undefined) {
+          tiltEl.value = prefs.tiltStrength;
+          document.getElementById('tiltVal').textContent = prefs.tiltStrength;
+        }
         const textEl = document.getElementById('inputText');
         if (textEl && prefs.text !== undefined) textEl.value = prefs.text;
         if (prefs.stickers) activeStickers = prefs.stickers;
@@ -965,6 +1307,13 @@
       el.addEventListener('change', savePrefs);
     });
     document.getElementById('inputText').addEventListener('input', savePrefs);
+
+    // 字体池复选框 + 倾斜滑块
+    document.getElementById('fontPool').addEventListener('change', () => { savePrefs(); render(); });
+    document.getElementById('tiltStrength').addEventListener('input', () => {
+      document.getElementById('tiltVal').textContent = document.getElementById('tiltStrength').value;
+    });
+    document.getElementById('tiltStrength').addEventListener('change', () => { savePrefs(); render(); });
 
     // ── 启动 ──
     window.addEventListener('load', () => {

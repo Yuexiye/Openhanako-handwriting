@@ -26,3 +26,15 @@
   font-weight: normal;
   font-style: normal;
 }
+@font-face {
+  font-family: 'Long Cang';
+  src: url('LongCang-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ZCOOL QingKe HuangYou';
+  src: url('ZCOOLQingKeHuangYou-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
