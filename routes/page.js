@@ -7,6 +7,24 @@ import path from 'node:path';
 export default function (app, ctx) {
   const pluginDir = ctx.pluginDir;
 
+  // ── 笔画数据：assets/strokes/*.json ——
+  // （扁平化目录，每个汉字一个 JSON 文件）
+  app.get('/assets/strokes/:char', async (c) => {
+    const char = c.req.param('char');
+    const filePath = path.join(pluginDir, 'assets', 'strokes', char);
+    try {
+      const data = fs.readFileSync(filePath);
+      return new Response(data, {
+        headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=86400' },
+      });
+    } catch {
+      return new Response('{"error":"char not found"}', {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  });
+
   // ── 静态资源：assets/* ——
   app.get('/assets/:dir/:file', async (c) => {
     const filePath = path.join(pluginDir, 'assets', c.req.param('dir'), c.req.param('file'));
@@ -20,10 +38,27 @@ export default function (app, ctx) {
         '.png': 'image/png',
         '.jpg': 'image/jpeg',
         '.svg': 'image/svg+xml',
+        '.js': 'application/javascript',
+        '.json': 'application/json',
       }[ext] || 'application/octet-stream';
       const data = fs.readFileSync(filePath);
       return new Response(data, {
         headers: { 'Content-Type': mime, 'Cache-Control': 'max-age=86400' },
+      });
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  });
+
+  // ── src/ 目录静态文件 ——
+  app.get('/src/:file', async (c) => {
+    const filePath = path.join(pluginDir, 'src', c.req.param('file'));
+    try {
+      const ext = path.extname(filePath).toLowerCase();
+      const mime = { '.js': 'application/javascript', '.json': 'application/json' }[ext] || 'text/plain';
+      const data = fs.readFileSync(filePath);
+      return new Response(data, {
+        headers: { 'Content-Type': mime, 'Cache-Control': 'max-age=3600' },
       });
     } catch {
       return new Response('Not found', { status: 404 });

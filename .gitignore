@@ -3,6 +3,7 @@ node_modules/
 __pycache__/
 *.pyc
 .env
+assets/data/node_modules/
 
 # OS files
 .DS_Store

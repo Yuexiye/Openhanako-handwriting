@@ -223,6 +223,14 @@
     </div>
 
     <div class="config-group">
+      <label>渲染模式</label>
+      <select id="renderMode">
+        <option value="font" selected>字体渲染</option>
+        <option value="stroke">笔画渲染 ✨</option>
+      </select>
+    </div>
+
+    <div class="config-group">
       <label>手写抖动</label>
       <select id="jitter">
         <option value="0">无</option>
@@ -1149,6 +1157,75 @@
       }
     });
 
+    // ── 笔画渲染模式 ──
+
+    async function renderStrokeMode(text, paperStyle, fontSize, inkColor, jitter) {
+      const engine = window.StrokeEngine;
+      if (!engine) {
+        document.getElementById('statusBar').textContent = '笔画引擎未加载';
+        return;
+      }
+
+      // 解析文本为行
+      const rawLines = text.split('\n');
+      const lines = [];
+      const maxWidth = CANVAS_W - 160;
+      for (const line of rawLines) {
+        let current = '';
+        for (const ch of line) {
+          if (current.length * fontSize + fontSize > maxWidth) {
+            lines.push(current);
+            current = ch;
+          } else {
+            current += ch;
+          }
+        }
+        if (current) lines.push(current);
+      }
+
+      // 预加载所有需要的汉字
+      const allChars = new Set();
+      for (const line of lines) {
+        for (const ch of line) {
+          if (!/[\s\n\r]/.test(ch)) allChars.add(ch);
+        }
+      }
+      if (allChars.size > 0) {
+        await engine.preload([...allChars]);
+      }
+
+      // 逐行渲染
+      const marginLeft = 80;
+      const marginTop = 60;
+      const lineHeight = fontSize * 1.7;
+
+      ctx.globalAlpha = 1;
+
+      for (let li = 0; li < lines.length; li++) {
+        const line = lines[li];
+        if (!line.trim()) continue;
+
+        const y = marginTop + li * lineHeight;
+
+        await engine.renderLine(ctx, line, marginLeft, y, fontSize, 4, {
+          color: inkColor,
+          baseWidth: Math.max(2, fontSize / 10),
+          jitter: jitter * (fontSize / 22),
+          seed: (seed + li * 1000),
+          // 三档笔压：重 → 轻 → 重
+          pressureStart: 1.4,
+          pressureMiddle: 0.75,
+          pressureEnd: 0.65,
+          // 飞白
+          fadeStart: 0.05,
+          fadeEnd: 0.75,
+          fadeOpacity: 0.4,
+          connectStrokes: true,
+          connectThreshold: fontSize * 1.0,
+        });
+      }
+    }
+
     // ── 主渲染 ──
 
     function render(newSeed) {
@@ -1180,19 +1257,40 @@
       const inkEffect = document.getElementById('inkEffect').value;
       const fontPoolEnabled = document.getElementById('fontPool').checked;
       const tiltStrength = parseInt(document.getElementById('tiltStrength').value);
-      drawPaper(paperColor, paperStyle);
-      drawText(text, cnFont, enFont, otherFont, fontSize, jitter, corrStyle, corrPos, paperStyle, inkColor, inkEffect, fontPoolEnabled, tiltStrength);
-      drawStickers();
+      const renderMode = document.getElementById('renderMode').value;
 
-      const fontInfo = cnFont.split(' ').slice(0,2).join(' ');
-      const extras = [];
-      if (fontPoolEnabled) extras.push('混排');
-      if (tiltStrength > 0) extras.push('倾斜' + tiltStrength);
-      const extraStr = extras.length > 0 ? ' [' + extras.join('+') + ']' : '';
-      const statusText = isComposition
-        ? `✓ 作文纸 — ${text.length} 字 | 字号由格子决定 (${fontSize}px)${extraStr}`
-        : `✓ 已生成 — ${text.length} 字 | ${fontInfo} | ${fontSize}px | 抖动 ${jitter}${extraStr}`;
-      document.getElementById('statusBar').textContent = statusText;
+      drawPaper(paperColor, paperStyle);
+
+      if (renderMode === 'stroke' && window.StrokeEngine) {
+        // 笔画渲染模式
+        document.getElementById('statusBar').textContent = '🎨 笔画渲染中...';
+        renderStrokeMode(text, paperStyle, fontSize, inkColor, jitter).then(() => {
+          drawStickers();
+          const statusText = `🎨 笔画渲染 — ${text.length} 字 | ${fontSize}px | 抖动 ${jitter}`;
+          document.getElementById('statusBar').textContent = statusText;
+        }).catch(err => {
+          console.error('笔画渲染失败:', err);
+          document.getElementById('statusBar').textContent = '⚠️ 笔画渲染失败，请尝试字体模式';
+          // 回退到字体模式
+          drawPaper(paperColor, paperStyle);
+          drawText(text, cnFont, enFont, otherFont, fontSize, jitter, corrStyle, corrPos, paperStyle, inkColor, inkEffect, fontPoolEnabled, tiltStrength);
+          drawStickers();
+        });
+      } else {
+        // 字体渲染模式（原逻辑）
+        drawText(text, cnFont, enFont, otherFont, fontSize, jitter, corrStyle, corrPos, paperStyle, inkColor, inkEffect, fontPoolEnabled, tiltStrength);
+        drawStickers();
+
+        const fontInfo = cnFont.split(' ').slice(0,2).join(' ');
+        const extras = [];
+        if (fontPoolEnabled) extras.push('混排');
+        if (tiltStrength > 0) extras.push('倾斜' + tiltStrength);
+        const extraStr = extras.length > 0 ? ' [' + extras.join('+') + ']' : '';
+        const statusText = isComposition
+          ? `✓ 作文纸 — ${text.length} 字 | 字号由格子决定 (${fontSize}px)${extraStr}`
+          : `✓ 已生成 — ${text.length} 字 | ${fontInfo} | ${fontSize}px | 抖动 ${jitter}${extraStr}`;
+        document.getElementById('statusBar').textContent = statusText;
+      }
     }
 
     // ── 导出 ──
@@ -1259,6 +1357,7 @@
         inkEffect: document.getElementById('inkEffect').value,
         fontPool: document.getElementById('fontPool').checked,
         tiltStrength: document.getElementById('tiltStrength').value,
+        renderMode: document.getElementById('renderMode').value,
         text: document.getElementById('inputText').value,
         stickers: activeStickers, // [{type:'emoji'|'label', ...}]
       };
@@ -1287,6 +1386,9 @@
           const el = document.getElementById(id);
           if (el && prefs[key] !== undefined) el.value = prefs[key];
         }
+        // 渲染模式
+        const modeEl = document.getElementById('renderMode');
+        if (modeEl && prefs.renderMode !== undefined) modeEl.value = prefs.renderMode;
         // 字体池和倾斜（非 select/textarea）
         const poolEl = document.getElementById('fontPool');
         if (poolEl && prefs.fontPool !== undefined) poolEl.checked = prefs.fontPool;
@@ -1331,6 +1433,8 @@
       setTimeout(sendReady, 1000);
     });
   </script>
+
+  <script src="/src/stroke-engine.js"></script>
 
 </body>
 </html>
