@@ -38,3 +38,8 @@
 | 851 Lakeus Night Writing (851远星夜行手写体) | 免费商用（作者声明） |
 | Caveat | SIL OFL |
 | Zen Maru Gothic | SIL OFL |
+
+
+## 许可
+
+[GNU AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html)
