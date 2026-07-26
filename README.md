@@ -1,9 +1,5 @@
 # Openhanako-handwriting ✎
 
-
-![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
-
-
 手写稿生成器 — Hanako 插件，将文本渲染为手写风格图片。
 
 ## 功能
@@ -38,11 +34,3 @@
 | 851 Lakeus Night Writing (851远星夜行手写体) | 免费商用（作者声明） |
 | Caveat | SIL OFL |
 | Zen Maru Gothic | SIL OFL |
-
-
-## 许可
-
-本项目采用**双重许可**：
-
-- **开源许可**：[GNU AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html) — 开源免费，但修改必须开源
-- **商业许可**：闭源使用需购买商业授权，详见 [COMMERCIAL-LICENSE.md](./COMMERCIAL-LICENSE.md)

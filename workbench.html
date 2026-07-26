@@ -5,11 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>手写稿生成器</title>
   <style>
+    /* ── 主题设计令牌：宿主通过 ?hana-theme=dark|light 注入到 <body> ──
+       纸张/画布区域始终浅色（见 .preview-panel canvas），不受主题影响。 */
+    :root {
+      --bg: #1a1a2e;
+      --panel-bg: #16213e;
+      --fg: #e6e6f0;
+      --fg-sub: #a0a0c0;
+      --input-bg: #0f3460;
+      --border: rgba(100,100,140,0.4);
+      --accent: #3dc5ff;
+      --accent2: #76e3e5;
+      --accent-hover: #5dd4ff;
+      --status-bg: rgba(15,15,25,0.95);
+    }
+    body[data-hana-theme=dark] {
+      --bg: #1a1a2e;
+      --panel-bg: #16213e;
+      --fg: #e6e6f0;
+      --fg-sub: #a0a0c0;
+      --input-bg: #0f3460;
+      --border: rgba(100,100,140,0.4);
+      --accent: #3dc5ff;
+      --accent2: #76e3e5;
+      --accent-hover: #5dd4ff;
+      --status-bg: rgba(15,15,25,0.95);
+      color-scheme: dark;
+    }
+    body[data-hana-theme=light] {
+      --bg: #f0f0f5;
+      --panel-bg: #ffffff;
+      --fg: #2a2a3a;
+      --fg-sub: #6a6a80;
+      --input-bg: #ffffff;
+      --border: rgba(100,100,140,0.3);
+      --accent: #1a9fd0;
+      --accent2: #2bb3b5;
+      --accent-hover: #3bb6e0;
+      --status-bg: rgba(240,240,245,0.95);
+      color-scheme: light;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, 'Microsoft YaHei UI', sans-serif;
-      background: #1a1a2e;
-      color: #e6e6f0;
+      background: var(--bg);
+      color: var(--fg);
       height: 100vh;
       display: flex;
       overflow: hidden;
@@ -18,8 +59,8 @@
     .config-panel {
       width: 280px;
       padding: 20px;
-      background: #16213e;
-      border-right: 1px solid rgba(100,100,140,0.3);
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -28,7 +69,7 @@
     }
     .config-panel h2 {
       font-size: 16px;
-      color: #76e3e5;
+      color: var(--accent2);
       margin-bottom: 4px;
       display: flex;
       align-items: center;
@@ -41,13 +82,13 @@
     }
     .config-group label {
       font-size: 12px;
-      color: #a0a0c0;
+      color: var(--fg-sub);
     }
     .config-group select,
     .config-group textarea {
-      background: #0f3460;
-      color: #e6e6f0;
-      border: 1px solid rgba(100,100,140,0.4);
+      background: var(--input-bg);
+      color: var(--fg);
+      border: 1px solid var(--border);
       border-radius: 6px;
       padding: 8px 10px;
       font-size: 13px;
@@ -61,7 +102,7 @@
     .config-group select:focus,
     .config-group textarea:focus {
       outline: none;
-      border-color: #76e3e5;
+      border-color: var(--accent2);
     }
 
     .btn-group {
@@ -80,11 +121,11 @@
       font-family: inherit;
     }
     .btn-primary {
-      background: #3dc5ff;
-      color: #1a1a2e;
+      background: var(--accent);
+      color: var(--bg);
       font-weight: 600;
     }
-    .btn-primary:hover { background: #5dd4ff; }
+    .btn-primary:hover { background: var(--accent-hover); }
     .btn-secondary {
       background: rgba(100,100,140,0.3);
       color: #e6e6f0;
@@ -110,7 +151,7 @@
       justify-content: center;
       padding: 20px;
       overflow: auto;
-      background: #111;
+      background: var(--bg);
     }
     .preview-panel canvas {
       max-width: 100%;
@@ -126,10 +167,10 @@
       left: 0;
       right: 0;
       padding: 6px 16px;
-      background: rgba(15, 15, 25, 0.95);
+      background: var(--status-bg);
       font-size: 12px;
-      color: #a0a0c0;
-      border-top: 1px solid rgba(100,100,140,0.2);
+      color: var(--fg-sub);
+      border-top: 1px solid var(--border);
       z-index: 10;
     }
   </style>

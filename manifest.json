@@ -7,7 +7,9 @@
   "minAppVersion": "0.0.0",
   "trust": "full-access",
   "contributes": {
-    "tools": [],
+    "tools": [
+      { "source": "tools/generate_handwriting.js" }
+    ],
     "page": {
       "title": { "zh": "手写稿生成器", "en": "Handwriting" },
       "icon": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3dc5ff\" stroke-width=\"1.5\"><text x=\"3\" y=\"20\" font-size=\"20\">✎</text></svg>",
