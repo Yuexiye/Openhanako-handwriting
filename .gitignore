@@ -1,15 +1,2 @@
-# Dependencies
 node_modules/
-__pycache__/
-*.pyc
-.env
-assets/data/node_modules/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Temp/backup
-*.tmp
-*.bak
-*.log
+PROJECT_LOG.md

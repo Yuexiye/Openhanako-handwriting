@@ -97,15 +97,20 @@ export default function (app, ctx) {
   });
 
   // ── 工作台页面 ──
+  // 主题：宿主通过 ?hana-theme=dark|light 传入，服务端注入到 <body>
   app.get('/handwriting', async (c) => {
     const htmlPath = path.join(pluginDir, 'workbench.html');
+    const theme = c.req.query('hana-theme') || 'dark';
+    const esc = (s) => String(s).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const attr = ` data-hana-theme="${esc(theme)}" data-surface="page"`;
     try {
       const html = fs.readFileSync(htmlPath, 'utf-8');
-      return c.html(html);
+      const themed = html.replace('<body', `<body${attr}`);
+      return c.html(themed);
     } catch {
       return c.html(`<!doctype html>
 <html>
-<body style="background:#1a1a2e;color:#3dc5ff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui">
+<body${attr} style="background:#1a1a2e;color:#3dc5ff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui">
   <div style="text-align:center">
     <h1>✎ 手写稿生成器</h1>
     <p style="color:#666;font-size:13px;margin-top:8px">工作台文件未找到</p>
